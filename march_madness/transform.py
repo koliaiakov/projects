@@ -252,3 +252,77 @@ def get_last_games(row, team_games, kept_var, index=None):
             ratio_season,
         ]
     return l
+
+
+def build_global_data(data, is_tournament=False):
+    nd = np.zeros(shape=(len(data) * 2, 11))
+    tournament_dummy = 1 if is_tournament else 0
+    for i, row in data.iterrows():
+        nd[2 * i, 0] = row["Season"]
+        nd[2 * i + 1, 0] = row["Season"]
+        nd[2 * i, 1] = row["DayNum"]
+        nd[2 * i + 1, 1] = row["DayNum"]
+        nd[2 * i, 2] = row["WTeamID"]
+        nd[2 * i, 3] = row["LTeamID"]
+        nd[2 * i + 1, 2] = row["LTeamID"]
+        nd[2 * i + 1, 3] = row["WTeamID"]
+        nd[2 * i, 4] = 1
+        nd[2 * i + 1, 4] = 0
+        nd[2 * i, 5] = tournament_dummy
+        nd[2 * i + 1, 5] = tournament_dummy
+        nd[2 * i, 6] = 1 if row["WLoc"] == "H" else 0
+        nd[2 * i, 7] = 1 if row["WLoc"] == "A" else 0
+        nd[2 * i + 1, 6] = 1 if row["WLoc"] == "A" else 0
+        nd[2 * i + 1, 7] = 1 if row["WLoc"] == "H" else 0
+        nd[2 * i, 8] = row["WScore"]
+        nd[2 * i + 1, 8] = row["LScore"]
+        nd[2 * i, 9] = row["LScore"]
+        nd[2 * i + 1, 9] = row["WScore"]
+        nd[2 * i, 10] = row["WScore"] - row["LScore"]
+        nd[2 * i + 1, 10] = row["LScore"] - row["WScore"]
+
+    nd = pd.DataFrame(
+        nd,
+        columns=[
+            "season",
+            "daynym",
+            "teamid",
+            "opponentid",
+            "win",
+            "is_tournament",
+            "is_home",
+            "is_opp_home",
+            "score",
+            "opp_score",
+            "diff_score",
+        ],
+    )
+
+    return nd
+
+
+def compute_stats(data):
+    tmp = data.groupby(["season", "teamid"]).agg(
+        nbwins=("win", "sum"),
+        ratiowins=("win", "mean"),
+        totalpoints=("score", "sum"),
+        opptotalpoints=("opp_score", "sum"),
+        oppmeanpoints=("opp_score", "mean"),
+        avgdiff=("diff_score", "mean"),
+    )
+    results = {
+        (row["season"], row["teamid"]): list(
+            row[
+                [
+                    "nbwins",
+                    "ratiowins",
+                    "totalpoints",
+                    "opptotalpoints",
+                    "oppmeanpoints",
+                    "avgdiff",
+                ]
+            ]
+        )
+        for _, row in tmp.reset_index().iterrows()
+    }
+    return results
