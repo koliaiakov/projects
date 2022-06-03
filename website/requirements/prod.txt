@@ -1,3 +1,0 @@
-# Packages needed for deployment
-Django==4.0.3
-psycopg2
